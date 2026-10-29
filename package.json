@@ -1,0 +1,12 @@
+{
+  "name": "obsidian-progress-tracker",
+  "version": "1.3.1",
+  "description": "Prebuilt Obsidian progress tracker runtime",
+  "main": "main.js",
+  "scripts": {
+    "build": "node esbuild.config.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}

@@ -1,0 +1,176 @@
+/* Narrow, portrait-shaped modal so it hugs a portrait cover instead of
+   Obsidian's default wide/square modal box. */
+.wpm-modal {
+	width: 280px;
+	max-width: 90vw;
+}
+
+.watch-progress-modal {
+	padding: 4px;
+}
+
+.wpm-modal-tools {
+	display: flex;
+	justify-content: flex-start;
+	margin-bottom: 4px;
+}
+
+.wpm-refresh-button {
+	width: 28px;
+	height: 28px;
+	padding: 4px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.wpm-refresh-button svg {
+	width: 16px;
+	height: 16px;
+}
+
+.wpm-refresh-button.is-loading svg {
+	animation: wpm-refresh-spin 1s linear infinite;
+}
+
+@keyframes wpm-refresh-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+.wpm-header {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 16px;
+	text-align: center;
+}
+
+.wpm-title {
+	font-size: 1.05em;
+	font-weight: 600;
+}
+
+.wpm-cover {
+	width: 100%;
+	height: auto;
+	max-height: 260px;
+	object-fit: cover;
+	border-radius: 6px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.wpm-bar-wrap {
+	margin-bottom: 12px;
+}
+
+.wpm-bar-track {
+	width: 100%;
+	height: 14px;
+	background: var(--background-modifier-border);
+	border-radius: 7px;
+	overflow: hidden;
+}
+
+.wpm-bar-fill {
+	height: 100%;
+	background: var(--interactive-accent);
+	width: 0%;
+	transition: width 0.15s ease;
+}
+
+.wpm-percent-label {
+	margin-top: 4px;
+	text-align: center;
+	font-size: 0.85em;
+	color: var(--text-muted);
+}
+
+/* Full width, edge-to-edge with the progress bar above it: "-" pinned to
+   the left edge, "+" pinned to the right edge, readout centered between. */
+.wpm-number-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	width: 100%;
+	margin-bottom: 16px;
+}
+
+.wpm-episode-title {
+	min-height: 1.4em;
+	margin: -4px 0 16px;
+	text-align: center;
+	line-height: 1.4;
+	color: var(--text-normal);
+}
+
+.wpm-step-btn {
+	width: 26px;
+	height: 26px;
+	padding: 0;
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 50%;
+	font-weight: 600;
+	line-height: 1;
+}
+
+.wpm-readout {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 4px;
+	flex: 1;
+	min-width: 0;
+}
+
+/* Fixed pixel width (not ch-relative) so 4-digit episode counts always
+   fit regardless of theme font. Only this field is editable. */
+.wpm-progress-input {
+	border: none;
+	background: transparent;
+	box-shadow: none;
+	text-align: center;
+	font-size: 1.1em;
+	font-weight: 600;
+	color: var(--interactive-accent);
+	width: 52px;
+	flex-shrink: 0;
+	padding: 0 2px;
+}
+
+.wpm-progress-input:focus {
+	box-shadow: 0 0 0 2px var(--interactive-accent);
+	border-radius: 4px;
+}
+
+/* Hide the number input spinner arrows so it reads as plain text. */
+.wpm-progress-input::-webkit-inner-spin-button,
+.wpm-progress-input::-webkit-outer-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
+}
+.wpm-progress-input {
+	-moz-appearance: textfield;
+}
+
+/* Read-only total — plain text, not an input, sized to its content only. */
+.wpm-total-display {
+	font-size: 1.1em;
+	color: var(--text-normal);
+}
+
+.wpm-slash {
+	color: var(--text-muted);
+	flex-shrink: 0;
+}
+
+.wpm-btn-row {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+}
