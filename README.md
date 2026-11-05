@@ -1,8 +1,8 @@
 # Progress Tracker
 
-An Obsidian plugin for tracking anime, game, and book progress. For anime, it
+An Obsidian plugin for tracking anime and game progress. For anime, it
 reads the `progress`, `episodes`, `title`, and `cover` frontmatter fields. For
-games and books, it reads `progress`, `chapters`, `title`, and `cover`. A compact
+games, it reads `progress`, `chapters`, `title`, and `cover`. A compact
 modal lets you update progress with a live percentage bar and quick -1/+1
 buttons.
 
@@ -19,17 +19,16 @@ finished:
 For anime, `episodes` is the total episode count and `progress` is how many you
 have watched. The completion percentage is computed as `progress / episodes`.
 Game notes use `chapters` as the total chapter count and `progress` as the
-number of chapters completed. Book notes use the same fields. Other
+number of chapters completed. Other
 frontmatter fields (e.g. `studio`, `series`) are left untouched unless progress
 reaches the total.
-Book notes (`type: "[[📚]]"`) use the `chapters` property and can also use the
-same numbered checkbox list under `## Chapters` as game notes.
 
 ## Usage
 
 Open an anime note and run **Sync episodes and update watch progress** to
 open the progress modal. Episodes are not synced automatically; click the
-refresh button in the modal to fetch the latest episodes.
+refresh button in the modal to fetch the latest episodes. Episode titles are
+added in English only.
 
 For game notes, set `type` to `[[🎮]]` and add a numbered checklist under
 `## Chapters`. The existing checked boxes initialize progress; the tracker
@@ -37,16 +36,12 @@ does not call anime services or replace game checklist titles. Saving updates
 the checkboxes and the `progress` and `chapters` frontmatter fields. Anime
 notes continue to use `episodes`.
 
-Book notes with `type: "[[📚]]"` can use the same `## Chapters` checklist.
-Saving synchronizes its checked boxes with the book's `progress` and `chapters`
-properties.
-
-Run **Update progress for active anime, game, or book note** from the command
+Run **Update progress for active anime or game note** from the command
 palette, or click the ribbon icon. The modal shows title, cover, progress,
 and the checklist. Use the step buttons, number field, or checklist entries,
 then click **Save**.
 
-When saved progress reaches the episode or chapter total, the plugin sets
+When saved progress reaches the episode or game chapter total, the plugin sets
 `status` to `[[🟣 Fin]]` and updates `finished` to today's date.
 
 ## Deploying into your vault

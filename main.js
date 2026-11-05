@@ -424,17 +424,8 @@ function todayDate() {
   const day = String(now.getDate()).padStart(2, "0");
   return `${now.getFullYear()}-${month}-${day}`;
 }
-function isBookNote(frontmatter) {
-  const rawTypes = frontmatter && frontmatter.type;
-  const types = Array.isArray(rawTypes) ? rawTypes : [rawTypes];
-  return types.some((rawType) => {
-    if (rawType == null) return false;
-    const type = String(rawType).replace(/^\[\[/, "").replace(/\]\]$/, "").split("|", 1)[0].trim();
-    return type === "\u{1F4DA}" || /^book$/i.test(type);
-  });
-}
 var GameProgressModal = class extends Modal {
-  constructor(app, title, cover, items, initialProgress, onSave, total = items.length, isBook = false) {
+  constructor(app, title, cover, items, initialProgress, onSave, total = items.length) {
     super(app);
     this.title = title;
     this.cover = cover;
@@ -442,7 +433,6 @@ var GameProgressModal = class extends Modal {
     this.total = total;
     this.progress = initialProgress;
     this.onSaveProgress = onSave;
-    this.isBook = isBook;
   }
   onOpen() {
     this.modalEl.addClass("wpm-modal");
@@ -474,7 +464,7 @@ var GameProgressModal = class extends Modal {
       input.value = String(this.progress);
       fill.style.width = `${percent}%`;
       percentage.setText(`${percent}%`);
-      current.setText(this.progress > 0 && this.items[this.progress - 1] ? `${this.progress}. ${this.items[this.progress - 1].title}` : this.isBook && this.progress > 0 ? `Chapter ${this.progress}` : "");
+      current.setText(this.progress > 0 && this.items[this.progress - 1] ? `${this.progress}. ${this.items[this.progress - 1].title}` : "");
     };
     const set = (value) => {
       this.progress = Math.max(0, Math.min(this.total, Math.round(Number(value) || 0)));
@@ -508,10 +498,11 @@ module.exports = class ProgressTrackerPlugin extends AnimeProgressPlugin {
   async onload() {
     addIcon(PROGRESS_ICON_ID, PROGRESS_ICON_SVG);
     await super.onload();
+    this.settings.includeNativeTitle = false;
     this.addCommand({
       id: "update-active-note-progress",
       icon: PROGRESS_ICON_ID,
-      name: "Update progress for active anime, game, or book note",
+      name: "Update progress for active anime or game note",
       checkCallback: (checking) => {
         const file = this.app.workspace.getActiveFile();
         if (!file || file.extension !== "md") return false;
@@ -523,7 +514,6 @@ module.exports = class ProgressTrackerPlugin extends AnimeProgressPlugin {
   async syncAndOpen(file) {
     var _a;
     const frontmatter = ((_a = this.app.metadataCache.getFileCache(file)) == null ? void 0 : _a.frontmatter) || {};
-    if (isBookNote(frontmatter)) return this.openBookProgress(file, frontmatter);
     if (!isGameNote(frontmatter)) return this.openAnimeWithEpisodeUpdate(file);
     try {
       const content = await this.app.vault.read(file);
@@ -555,53 +545,6 @@ module.exports = class ProgressTrackerPlugin extends AnimeProgressPlugin {
     } catch (error) {
       console.error(error);
       new Notice(`Could not open game progress: ${error instanceof Error ? error.message : error}`);
-    }
-  }
-  async openBookProgress(file, frontmatter) {
-    try {
-      const content = await this.app.vault.read(file);
-      const items = parseChecklist(content);
-      const chaptersValue = Number(Array.isArray(frontmatter.chapters) ? frontmatter.chapters[0] : frontmatter.chapters);
-      const propertyChapters = Number.isFinite(chaptersValue) && chaptersValue > 0 ? Math.floor(chaptersValue) : 0;
-      const chapters = items.length > 0 ? items.length : propertyChapters;
-      if (chapters < 1) {
-        new Notice('Add numbered checkboxes under "## Chapters" or set the chapters property to track this book.');
-        return;
-      }
-      const title = frontmatterText(frontmatter.title) || file.basename;
-      const cover = frontmatterText(frontmatter.cover);
-      const initialProgress = items.length > 0 ? readInitialProgress(items, frontmatter.progress) : Math.max(0, Math.min(chapters, Math.round(Number(frontmatter.progress) || 0)));
-      new GameProgressModal(
-        this.app,
-        title,
-        cover,
-        items,
-        initialProgress,
-        async (progress) => {
-          if (items.length > 0) {
-            const latestContent = await this.app.vault.read(file);
-            const latestItems = parseChecklist(latestContent);
-            if (latestItems.length !== items.length) {
-              throw new Error("The chapter checklist changed while the progress window was open. Reopen it and try again.");
-            }
-            const updatedContent = updateChecklist(latestContent, progress);
-            if (updatedContent !== latestContent) await this.app.vault.modify(file, updatedContent);
-          }
-          await this.app.fileManager.processFrontMatter(file, (properties) => {
-            properties.chapters = chapters;
-            properties.progress = progress;
-            if (progress >= chapters) {
-              applyCompletionMetadata(properties, todayDate());
-            }
-          });
-          new Notice(`Reading progress saved: ${progress}/${chapters} chapters`);
-        },
-        chapters,
-        true
-      ).open();
-    } catch (error) {
-      console.error(error);
-      new Notice(`Could not open book progress: ${error instanceof Error ? error.message : error}`);
     }
   }
   async openAnimeWithEpisodeUpdate(file) {
