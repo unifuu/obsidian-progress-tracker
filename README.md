@@ -28,7 +28,10 @@ reaches the total.
 Open an anime note and run **Sync episodes and update watch progress** to
 open the progress modal. Episodes are not synced automatically; click the
 refresh button in the modal to fetch the latest episodes. Episode titles are
-added in English only.
+added in English only. Episodes without a published title remain as numbered
+`Episode N` placeholders until a title is available; refreshing replaces those
+placeholders while preserving their checked state. MAL episode lists are
+paginated, and the tracker fetches all pages.
 
 For game notes, set `type` to `[[🎮]]` and add a numbered checklist under
 `## Chapters`. The existing checked boxes initialize progress; the tracker

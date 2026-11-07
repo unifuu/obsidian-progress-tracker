@@ -75,13 +75,40 @@ var require_anime_runtime = __commonJS({
       return i.sort((a, o) => a.number - o.number);
     }
     async function N(r) {
-      var t, n, a, o;
-      let i = await y({ url: `https://myanimelist.net/anime/${r}/episode`, method: "GET" }), e = new DOMParser().parseFromString((t = i.text) != null ? t : "", "text/html"), s = [];
-      for (let l of Array.from(e.querySelectorAll("td.episode-title"))) {
-        let c = l.querySelector('a[href*="/episode/"]'), p = Number((a = (n = c == null ? void 0 : c.getAttribute("href")) == null ? void 0 : n.match(/\/episode\/(\d+)/)) == null ? void 0 : a[1]), m = (o = c == null ? void 0 : c.textContent) == null ? void 0 : o.trim();
-        p && m && s.push({ number: p, title: m });
+      var _a, _b, _c, _d;
+      let id = String(r);
+      if (!/^\d+$/.test(id)) throw new Error(`Invalid MyAnimeList ID: ${id}`);
+      let page = await y({ url: `https://myanimelist.net/anime/${id}`, method: "GET" }), doc = new DOMParser().parseFromString(page.text || "", "text/html"), href = (_a = doc.querySelector('link[rel="canonical"]')) == null ? void 0 : _a.getAttribute("href");
+      if (!href) throw new Error("MyAnimeList anime page has no canonical URL.");
+      let canonical = new URL(href, "https://myanimelist.net");
+      if (canonical.hostname !== "myanimelist.net" || !new RegExp(`^/anime/${id}/[^/]+$`).test(canonical.pathname)) throw new Error("MyAnimeList returned an unexpected anime URL.");
+      let episodePath = `${canonical.pathname}/episode`, current = new URL(`${canonical.origin}${episodePath}`), episodes = [], seen = /* @__PURE__ */ new Set();
+      for (; current; ) {
+        let url = current.href;
+        if (seen.has(url)) throw new Error("MyAnimeList episode pagination repeated a page.");
+        seen.add(url);
+        let response = await y({ url, method: "GET" }), episodeDoc = new DOMParser().parseFromString(response.text || "", "text/html");
+        for (let cell of Array.from(episodeDoc.querySelectorAll("td.episode-title"))) {
+          let link = cell.querySelector('a[href*="/episode/"]'), match = (_b = link == null ? void 0 : link.getAttribute("href")) == null ? void 0 : _b.match(/\/episode\/(\d+)/), number = Number(match == null ? void 0 : match[1]), title = (_c = link == null ? void 0 : link.textContent) == null ? void 0 : _c.trim();
+          if (number && title) episodes.push({ number, title });
+        }
+        let nextHref = (_d = episodeDoc.querySelector('link[rel="next"]')) == null ? void 0 : _d.getAttribute("href");
+        if (!nextHref) break;
+        let next = new URL(nextHref, current);
+        if (next.hostname !== "myanimelist.net" || next.pathname !== episodePath) throw new Error("MyAnimeList returned an unexpected episode pagination URL.");
+        if (seen.has(next.href)) throw new Error("MyAnimeList episode pagination repeated a page.");
+        current = next;
+        await I(500);
       }
-      return s.sort((l, c) => l.number - c.number);
+      return episodes.sort((a, b) => a.number - b.number);
+    }
+    function mergeEpisodes(primary, fallback) {
+      let merged = new Map(primary.map((episode) => [episode.number, episode]));
+      for (let episode of fallback) {
+        let existing = merged.get(episode.number);
+        if (!existing || /^Episode\s+\d+$/i.test(existing.title)) merged.set(episode.number, episode);
+      }
+      return [...merged.values()].sort((a, b) => a.number - b.number);
     }
     async function $(r, i = false) {
       var l, c, p, m, E;
@@ -126,22 +153,20 @@ var require_anime_runtime = __commonJS({
       return `- [${i ? "x" : " "}] ${r.number}. ${r.title}${s}`;
     }
     function Q(r, i, e, s) {
-      let t = new Set(i.lines.map((p) => p.number)), n = e.filter((p) => !t.has(p.number)).sort((p, m) => p.number - m.number);
-      if (!n.length) return null;
-      let a = n.map((p) => z(p, false, s)).join(`
-`);
-      if (!i.found) return `${r}${r.endsWith(`
-`) ? "" : `
-`}
-## Episodes
-
-${a}
-`;
-      let o = r.length - i.after.length, l = r.slice(0, o), c = l.endsWith(`
-`) ? "" : `
-`;
-      return `${l}${c}${a}
-${i.after}`;
+      let existing = new Set(i.lines.map((line) => line.number)), byNumber = new Map(e.map((episode) => [episode.number, episode])), missing = e.filter((episode) => !existing.has(episode.number)).sort((a, b) => a.number - b.number);
+      if (!i.found) {
+        if (!missing.length) return null;
+        let lines2 = missing.map((episode) => z(episode, false, s)).join("\n");
+        return r + (r.endsWith("\n") ? "" : "\n") + "\n## Episodes\n\n" + lines2 + "\n";
+      }
+      let start = i.before.length, end = r.length - i.after.length, body = r.slice(start, end), updatedBody = body.replace(/^(-\s*\[)([ xX])(\]\s*)(\d+)(\.\s*)(.*)$/gm, (line, open, checked, close, number, dot, title) => {
+        let episode = byNumber.get(Number(number));
+        if (!episode || !/^Episode\s+\d+$/i.test(title) || /^Episode\s+\d+$/i.test(episode.title)) return line;
+        return z(episode, checked.toLowerCase() === "x", s);
+      }), changed = updatedBody !== body;
+      if (!missing.length) return changed ? r.slice(0, start) + updatedBody + i.after : null;
+      let prefix = r.slice(0, start) + updatedBody, lines = missing.map((episode) => z(episode, false, s)).join("\n"), separator = prefix.endsWith("\n") ? "" : "\n";
+      return prefix + separator + lines + "\n" + i.after;
     }
     var Z = { autoFillFinishedDate: true, source: "mal", includeNativeTitle: true, titleKey: "title" };
     var C = class extends u.Plugin {
@@ -204,13 +229,13 @@ ${i.after}`;
         if (this.settings.source !== "mal") n = await $(t);
         else if (typeof t == "string" && t.startsWith("anilist:")) n = await $(t.slice(8));
         else try {
-          if (n = await Y(t), !n.length) throw new Error("Jikan returned no episodes.");
+          if (n = await N(t), !n.length) throw new Error("MAL returned no episode titles.");
         } catch (h) {
-          console.warn("Jikan episode sync failed; falling back to MAL's public episode list", h);
+          console.warn("MAL episode page failed; falling back to Jikan", h);
           try {
-            if (n = await N(t), !n.length) throw new Error("MAL returned no episode titles.");
+            if (n = await Y(t), !n.length) throw new Error("Jikan returned no episodes.");
           } catch (w) {
-            console.warn("MAL episode page failed; falling back to AniList by MAL ID", w), new u.Notice("Jikan and MAL episode titles are unavailable; using AniList..."), n = await $(t, true);
+            console.warn("Jikan episode sync failed; falling back to AniList by MAL ID", w), new u.Notice("MAL and Jikan episode titles are unavailable; using AniList..."), n = await $(t, true);
           }
         }
         let a = typeof t == "string" && t.startsWith("anilist:"), o = Number((M = (f = this.app.metadataCache.getFileCache(i)) == null ? void 0 : f.frontmatter) == null ? void 0 : M.episodes);
@@ -219,13 +244,13 @@ ${i.after}`;
           if (o > h) {
             try {
               let d = await N(t);
-              Math.max(0, ...d.map((b) => b.number)) >= o && (n = d);
+              Math.max(0, ...d.map((b) => b.number)) >= o && (n = mergeEpisodes(n, d));
             } catch (d) {
               console.warn("MyAnimeList episode-page fallback failed; keeping the Jikan list", d);
             }
             if (Math.max(0, ...n.map((d) => d.number)) < o) try {
               let d = await $(t, true);
-              Math.max(0, ...d.map((b) => b.number)) >= o && (n = d);
+              Math.max(0, ...d.map((b) => b.number)) >= o && (n = mergeEpisodes(n, d));
             } catch (d) {
               console.warn("AniList episode completeness fallback failed; keeping the MyAnimeList list", d);
             }
